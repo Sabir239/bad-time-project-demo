@@ -1,0 +1,159 @@
+from operator import truediv
+
+import pygame
+import os
+pygame.init()
+
+# تشغيل الموسيقى
+pygame.mixer.init()
+
+pygame.mixer.music.load('undertale-au-bad-time-trio-theme-triple-the-threat.wab')
+pygame.mixer.music.play(0)
+
+# إعداد الشاشة
+class Screen():
+    def __init__(self, scr_h, scr_w):
+        self.scrW = scr_w
+        self.scrH = scr_h
+
+scrn = Screen(500, 700)
+screen = pygame.display.set_mode((scrn.scrW, scrn.scrH))
+pygame.display.set_caption("bad time")
+
+# إعداد الروح
+class Soul():
+    def __init__(self, x, y, w, h, step):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.stp = step
+        self.velocity = 0
+        self.gravity = 0.4
+        self.health = 92
+        self.visible = True
+
+    def on_ground(self, box_bottom):
+        return self.y + self.h >= box_bottom
+
+red_soul = Soul(330, 330, 30, 25, 2)
+
+# تحميل الصور
+souls = pygame.image.load("souls.png")
+caje = pygame.image.load("Caja.png")
+fight = pygame.image.load('FIGHT 0.png')
+spar = pygame.image.load('MERCY 0.png')
+act = pygame.image.load('ACT 0.png')
+item = pygame.image.load('ITEM 0.png')
+
+# تحميل سبرايتات سانس
+sans_intro = [pygame.image.load("intro/" + f) for f in sorted(os.listdir("intro")) if f.endswith(".png")]
+sans_intro = [pygame.transform.scale(img, (220, 200)) for img in sans_intro]
+
+sans_moves = [pygame.image.load("loop/" + f) for f in sorted(os.listdir("loop")) if f.endswith(".png")]
+sans_moves = [pygame.transform.scale(img, (210, 230)) for img in sans_moves]
+
+# تغيير حجم الصور
+caje = pygame.transform.scale(caje, (600, 180))
+souls = pygame.transform.scale(souls, (30, 20))
+fight = pygame.transform.scale(fight, (120, 50))
+act = pygame.transform.scale(act, (120, 50))
+item = pygame.transform.scale(item, (120, 50))
+spar = pygame.transform.scale(spar, (120, 50))
+
+# الصندوق
+box_rect = pygame.Rect(50, 240, caje.get_width(), caje.get_height())
+
+# إحداثيات سانس
+sans_x = 230
+sans_y = 18
+loop_sans_x = 0
+loop_sans_y = 0
+
+# دالة الرسم
+def draw_scene(sans_img, x, y):
+    #pygame.draw.rect()
+    screen.fill((0, 0, 0))
+    screen.blit(caje, (box_rect.x, box_rect.y))
+    screen.blit(souls, (red_soul.x, red_soul.y))
+    screen.blit(fight, (50, 450))
+    screen.blit(act, (210, 450))
+    screen.blit(item, (370, 450))
+    screen.blit(spar, (530, 450))
+    screen.blit(sans_img, (sans_x, sans_y))
+    pygame.display.update()
+
+# الإنترو
+current_frame = 0
+while current_frame < len(sans_intro):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit()
+
+    draw_scene(sans_intro[current_frame], sans_x, sans_y)
+    current_frame += 1
+    pygame.time.delay(100)
+
+# بداية اللوب
+current_frame = 0
+frame_delay = 0
+run = True
+start_time = pygame.time.get_ticks()
+gravity_enabled = False  # الجاذبية موقوفة في البداية
+jump_2= -6
+while run:
+    pygame.time.delay(10)
+    current_time = pygame.time.get_ticks()
+
+    # تفعيل الجاذبية بعد12  ثواني
+    if not gravity_enabled and current_time - start_time >= 11000:
+        gravity_enabled = True
+        # تفعيل الجاذبية بع25  ثواني
+    if current_time- start_time >=22000:
+        jump_2 = -8
+        red_soul.gravity = 0.3
+
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit()
+
+    keys = pygame.key.get_pressed()
+
+    if not gravity_enabled:
+        if keys[pygame.K_UP] and red_soul.y > box_rect.top:
+            red_soul.y -= red_soul.stp
+        if keys[pygame.K_DOWN] and red_soul.y + red_soul.h < box_rect.bottom:
+            red_soul.y += red_soul.stp
+    else:
+        if keys[pygame.K_UP] and red_soul.on_ground(box_rect.bottom):
+            red_soul.velocity = jump_2
+
+
+    if keys[pygame.K_LEFT] and red_soul.x > box_rect.left:
+        red_soul.x -= red_soul.stp
+    if keys[pygame.K_RIGHT] and red_soul.x + red_soul.w < box_rect.right:
+        red_soul.x += red_soul.stp
+
+    # تطبيق الجاذبية فقط بعد مرور الوقت
+    if gravity_enabled:
+        red_soul.velocity += red_soul.gravity
+        red_soul.y += red_soul.velocity
+
+        if red_soul.y + red_soul.h > box_rect.bottom:
+            red_soul.y = box_rect.bottom - red_soul.h
+            red_soul.velocity = 0
+
+        if red_soul.y < box_rect.top:
+            red_soul.y = box_rect.top
+            red_soul.velocity = 0
+
+    frame_delay += 1
+    if frame_delay >= 5:
+        current_frame = (current_frame + 1) % len(sans_moves)
+        frame_delay = 0
+
+    draw_scene(sans_moves[current_frame],loop_sans_x,loop_sans_y)
+
+
+pygame.quit()
